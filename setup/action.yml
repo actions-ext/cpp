@@ -1,0 +1,26 @@
+name: Setup C++
+description: 'Ensure C++ utilities are available, and setup CCache caching'
+
+runs:
+  using: 'composite'
+  steps:
+    ##########
+    # Caches #
+    ##########
+    ################
+    ################
+    # CCache Assets
+    - name: Setup CCache Cache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ runner.os }}-ccache-
+
+    - name: Use CCache for builds (Linux)
+      shell: bash
+      run: echo 'PATH=/usr/lib/ccache:'"$PATH" >> $GITHUB_ENV
+      if: ${{ runner.os == 'Linux' }}
+
+    - name: Use CCache for builds (Mac)
+      shell: bash
+      run: echo "PATH=$(brew --prefix)/opt/ccache/libexec:$PATH" >> $GITHUB_ENV
+      if: ${{ runner.os == 'macOS' }}
