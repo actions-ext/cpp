@@ -1,6 +1,7 @@
 # cpp
+
 Helper actions for C++ projects
 
-| Name | Action Reference | Description |
-|:-----|:-----------------|:------------|
-| [setup](./setup) | actions-ext/cpp/setup | Setup CCache (Linux / Macos only) |
+| Name             | Action Reference      | Description                                                         |
+| :--------------- | :-------------------- | :------------------------------------------------------------------ |
+| [setup](./setup) | actions-ext/cpp/setup | Configure MSVC, clang-format, and compiler caching across platforms |
