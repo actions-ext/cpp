@@ -1,11 +1,24 @@
 # setup
-An action to setup and enable CCache for use with C++ compilation.
+
+Configure a C++ toolchain for GitHub Actions:
+
+- Activate MSVC on Windows.
+- Install clang-format when unavailable.
+- Configure ccache on Linux and macOS.
+- Configure sccache and set `CC`/`CXX` for MSVC on Windows.
 
 ## Usage
 
 ```yaml
 - name: Setup C++
-  uses: actions-ext/cpp/setup@v1
+  uses: actions-ext/cpp/setup@51c484ef64088c62434226039d0e3359f5fc8df6
 ```
 
-**NOTE:** Windows setup is not yet available.
+## Inputs
+
+| Name           | Default | Description                            |
+| :------------- | :------ | :------------------------------------- |
+| `cache`        | `true`  | Enable compiler caching.               |
+| `cache_key`    | `cpp`   | Additional compiler cache key.         |
+| `clang_format` | `true`  | Install clang-format when unavailable. |
+| `msvc_arch`    | `x64`   | MSVC target architecture on Windows.   |
