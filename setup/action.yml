@@ -1,26 +1,70 @@
 name: Setup C++
-description: 'Ensure C++ utilities are available, and setup CCache caching'
+description: 'Configure the C++ toolchain, clang-format, and compiler caching'
+
+inputs:
+  cache:
+    description: 'Enable ccache on Linux/macOS and sccache on Windows'
+    default: 'true'
+  cache_key:
+    description: 'Additional compiler cache key'
+    default: 'cpp'
+  clang_format:
+    description: 'Install clang-format when it is not already available'
+    default: 'true'
+  msvc_arch:
+    description: 'MSVC target architecture on Windows'
+    default: 'x64'
 
 runs:
   using: 'composite'
   steps:
-    ##########
-    # Caches #
-    ##########
-    ################
-    ################
-    # CCache Assets
-    - name: Setup CCache Cache
+    - name: Configure MSVC
+      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      with:
+        arch: ${{ inputs.msvc_arch }}
+      if: ${{ runner.os == 'Windows' }}
+
+    - name: Install clang-format (Linux)
+      shell: bash
+      run: |
+        if ! command -v clang-format >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install --yes clang-format
+        fi
+        clang-format --version
+      if: ${{ inputs.clang_format == 'true' && runner.os == 'Linux' }}
+
+    - name: Install clang-format (macOS)
+      shell: bash
+      run: |
+        if ! command -v clang-format >/dev/null 2>&1; then
+          brew install clang-format
+        fi
+        clang-format --version
+      if: ${{ inputs.clang_format == 'true' && runner.os == 'macOS' }}
+
+    - name: Install clang-format (Windows)
+      shell: pwsh
+      run: |
+        if (-not (Get-Command clang-format -ErrorAction SilentlyContinue)) {
+          choco install llvm --no-progress --yes
+          $env:Path = "C:\Program Files\LLVM\bin;$env:Path"
+          "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        }
+        clang-format --version
+      if: ${{ inputs.clang_format == 'true' && runner.os == 'Windows' }}
+
+    - name: Setup compiler cache
       uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
-        key: ${{ runner.os }}-ccache-
+        key: ${{ runner.os }}-${{ inputs.cache_key }}
+        variant: ${{ runner.os == 'Windows' && 'sccache' || 'ccache' }}
+        create-symlink: ${{ runner.os != 'Windows' }}
+      if: ${{ inputs.cache == 'true' }}
 
-    - name: Use CCache for builds (Linux)
+    - name: Use sccache for MSVC
       shell: bash
-      run: echo 'PATH=/usr/lib/ccache:'"$PATH" >> $GITHUB_ENV
-      if: ${{ runner.os == 'Linux' }}
-
-    - name: Use CCache for builds (Mac)
-      shell: bash
-      run: echo "PATH=$(brew --prefix)/opt/ccache/libexec:$PATH" >> $GITHUB_ENV
-      if: ${{ runner.os == 'macOS' }}
+      run: |
+        echo 'CC=sccache cl' >> "$GITHUB_ENV"
+        echo 'CXX=sccache cl' >> "$GITHUB_ENV"
+      if: ${{ inputs.cache == 'true' && runner.os == 'Windows' }}
