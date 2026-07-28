@@ -30,6 +30,19 @@ jobs:
 
     - uses: ./setup
 
+    - uses: ./setup-vcpkg-cache
+      id: vcpkg-cache
+      with:
+        manifest: tests/vcpkg.json
+        overlay_ports: tests/vcpkg-overlays
+
+    - name: Verify vcpkg cache
+      run: |
+        test -n "${{ steps.vcpkg-cache.outputs.vcpkg-revision }}"
+        test -d "$VCPKG_DEFAULT_BINARY_CACHE"
+        git -C vcpkg rev-parse --verify HEAD
+      shell: bash
+
     - name: Verify tools (Linux / macOS)
       run: |
         clang-format --dry-run --Werror tests/hello.cpp

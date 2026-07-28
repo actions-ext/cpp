@@ -1,0 +1,78 @@
+name: Setup vcpkg cache
+description: 'Prepare a vcpkg checkout and cache its binary packages'
+
+inputs:
+  cache_key:
+    description: 'Additional vcpkg cache key'
+    default: 'vcpkg'
+  manifest:
+    description: 'Path to the vcpkg manifest'
+    default: 'vcpkg.json'
+  overlay_ports:
+    description: 'Path to overlay ports'
+    default: 'vcpkg-overlays'
+  vcpkg_ref:
+    description: 'Optional vcpkg branch, tag, or commit'
+    default: ''
+  vcpkg_repository:
+    description: 'vcpkg Git repository'
+    default: 'https://github.com/microsoft/vcpkg.git'
+  vcpkg_root:
+    description: 'Path to the vcpkg checkout'
+    default: 'vcpkg'
+
+outputs:
+  cache-hit:
+    description: 'Whether an exact vcpkg binary cache entry was restored'
+    value: ${{ steps.cache.outputs.cache-hit }}
+  vcpkg-revision:
+    description: 'Resolved vcpkg commit'
+    value: ${{ steps.prepare.outputs.revision }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare vcpkg
+      id: prepare
+      shell: bash
+      env:
+        VCPKG_REF: ${{ inputs.vcpkg_ref }}
+        VCPKG_REPOSITORY: ${{ inputs.vcpkg_repository }}
+        VCPKG_ROOT: ${{ inputs.vcpkg_root }}
+      run: |
+        if [ ! -e "$VCPKG_ROOT/.git" ]; then
+          if git ls-files --stage -- "$VCPKG_ROOT" | grep -q '^160000 '; then
+            git submodule update --init --depth 1 -- "$VCPKG_ROOT"
+          else
+            if [ -e "$VCPKG_ROOT" ]; then
+              if [ ! -d "$VCPKG_ROOT" ] || [ -n "$(find "$VCPKG_ROOT" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+                echo "$VCPKG_ROOT exists but is not a vcpkg Git checkout" >&2
+                exit 1
+              fi
+              rmdir "$VCPKG_ROOT"
+            fi
+            git clone --depth 1 "$VCPKG_REPOSITORY" "$VCPKG_ROOT"
+          fi
+        fi
+
+        if [ -n "$VCPKG_REF" ]; then
+          git -C "$VCPKG_ROOT" fetch --depth 1 origin "$VCPKG_REF"
+          git -C "$VCPKG_ROOT" checkout --detach FETCH_HEAD
+        fi
+
+        revision="$(git -C "$VCPKG_ROOT" rev-parse HEAD)"
+        cache_dir="${RUNNER_TEMP}/vcpkg-binary-cache"
+        mkdir -p "$cache_dir"
+
+        echo "revision=$revision" >> "$GITHUB_OUTPUT"
+        echo "cache_dir=$cache_dir" >> "$GITHUB_OUTPUT"
+        echo "VCPKG_DEFAULT_BINARY_CACHE=$cache_dir" >> "$GITHUB_ENV"
+
+    - name: Cache vcpkg binary packages
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.prepare.outputs.cache_dir }}
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache_key }}-${{ steps.prepare.outputs.revision }}-${{ hashFiles(inputs.manifest, format('{0}/**', inputs.overlay_ports)) }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache_key }}-${{ steps.prepare.outputs.revision }}-
