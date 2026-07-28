@@ -1,6 +1,7 @@
 # setup-vcpkg-cache
 
-Prepare a vcpkg checkout and cache its binary packages. Cache keys include runner OS and architecture, vcpkg commit, manifest, and overlay-port contents.
+Prepare a vcpkg checkout and cache its binary packages. Cache keys include runner OS and architecture, vcpkg commit, manifest, overlay-port contents, and
+workflow run. Each run restores the nearest compatible cache and saves rebuilt packages under a new key.
 
 ## Usage
 

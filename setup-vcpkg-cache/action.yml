@@ -73,6 +73,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.prepare.outputs.cache_dir }}
-        key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache_key }}-${{ steps.prepare.outputs.revision }}-${{ hashFiles(inputs.manifest, format('{0}/**', inputs.overlay_ports)) }}
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache_key }}-${{ steps.prepare.outputs.revision }}-${{ hashFiles(inputs.manifest, format('{0}/**', inputs.overlay_ports)) }}-${{ github.run_id }}-${{ github.run_attempt }}
         restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache_key }}-${{ steps.prepare.outputs.revision }}-${{ hashFiles(inputs.manifest, format('{0}/**', inputs.overlay_ports)) }}-
           ${{ runner.os }}-${{ runner.arch }}-${{ inputs.cache_key }}-${{ steps.prepare.outputs.revision }}-
